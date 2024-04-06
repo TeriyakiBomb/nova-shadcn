@@ -1,120 +1,133 @@
+const FRAMEWORK = "shadcn.framework";
+const SHELL_PATH_KEY = "shadcn.shell.path";
 
-var treeView = null;
+const shadComponents = [
+  "accordion",
+  "alert",
+  "alert-dialog",
+  "aspect-ratio",
+  "avatar",
+  "badge",
+  "breadcrumb",
+  "button",
+  "calendar",
+  "card",
+  "carousel",
+  "checkbox",
+  "collapsible",
+  "command",
+  "context-menu",
+  "dialog",
+  "drawer",
+  "dropdown-menu",
+  "form",
+  "hover-card",
+  "input",
+  "label",
+  "menubar",
+  "navigation-menu",
+  "pagination",
+  "pin-input",
+  "popover",
+  "progress",
+  "radio-group",
+  "resizable",
+  "scroll-area",
+  "select",
+  "separator",
+  "sheet",
+  "skeleton",
+  "slider",
+  "sonner",
+  "switch",
+  "table",
+  "tabs",
+  "tags-input",
+  "textarea",
+  "toast",
+  "toggle",
+  "toggle-group",
+  "tooltip",
+];
 
-
-exports.activate = function() {
-    // Do work when the extension is activated
-    
-    // Create the TreeView
-    treeView = new TreeView("mysidebar", {
-        dataProvider: new FruitDataProvider()
-    });
-    
-    treeView.onDidChangeSelection((selection) => {
-        // console.log("New selection: " + selection.map((e) => e.name));
-    });
-    
-    treeView.onDidExpandElement((element) => {
-        // console.log("Expanded: " + element.name);
-    });
-    
-    treeView.onDidCollapseElement((element) => {
-        // console.log("Collapsed: " + element.name);
-    });
-    
-    treeView.onDidChangeVisibility(() => {
-        // console.log("Visibility Changed");
-    });
-    
-    // TreeView implements the Disposable interface
-    nova.subscriptions.add(treeView);
+function getShadcnComponent(command, successMessage) {
+  executeCommand(command, successMessage);
 }
 
-exports.deactivate = function() {
-    // Clean up state before the extension is deactivated
-}
+nova.commands.register("shadcn.installComponent", (workspace) => {
+  function configToPublish(component) {
+    const commandName = `add ${component}`;
+    getShadcnComponent(commandName, `Installed ${component}`);
+  }
 
-
-nova.commands.register("mysidebar.add", () => {
-    // Invoked when the "add" header button is clicked
-    console.log("Add");
+  nova.workspace.showChoicePalette(shadComponents, {}, configToPublish);
 });
 
-nova.commands.register("mysidebar.remove", () => {
-    // Invoked when the "remove" header button is clicked
-    let selection = treeView.selection;
-    console.log("Remove: " + selection.map((e) => e.name));
-});
+function executeCommand(command, successMessage) {
+  const framework = nova.config.get(FRAMEWORK);
 
-nova.commands.register("mysidebar.doubleClick", () => {
-    // Invoked when an item is double-clicked
-    let selection = treeView.selection;
-    console.log("DoubleClick: " + selection.map((e) => e.name));
-});
+  let packageIdentifier;
+  switch (framework) {
+    case "React":
+      packageIdentifier = "shadcn-ui";
+      break;
+    case "Vue":
+      packageIdentifier = "shadcn-vue";
+      break;
+    case "Svelte":
+      packageIdentifier = "shadcn-svelte";
+      break;
+    default:
+      console.error("Unsupported framework");
+      return;
+  }
 
+  const fullCommand = `npx ${packageIdentifier}@latest ${command}`;
 
-class FruitItem {
-    constructor(name) {
-        this.name = name;
-        this.children = [];
-        this.parent = null;
+  const options = {
+    args: ["-c", fullCommand],
+    shell: true,
+    cwd: nova.workspace.path,
+  };
+  const shell = nova.config.get(SHELL_PATH_KEY);
+  const process = new Process(shell, options);
+  let processError = false;
+  let stdoutOutput = "";
+
+  process.onStdout((data) => {
+    if (data.includes("ERROR")) {
+      console.error("Process finished with errors");
+      nova.workspace.showErrorMessage(`⚠️ ${data.trim()}`);
+      processError = true;
+      return;
     }
-    
-    addChild(element) {
-        element.parent = this;
-        this.children.push(element);
+
+    console.log(`🏃‍♀️ Running ${fullCommand}`);
+    stdoutOutput += data.trim() + "\n";
+  });
+
+  process.onStderr((data) => {
+    console.error(`⚠️ Error: ${data.trim()}`);
+  });
+
+  process.onDidExit((status) => {
+    console.log(`👍 Process exited with status: ${status}`);
+
+    if (status === 0 && !processError) {
+      showNotification(successMessage, fullCommand);
+    } else if (status !== 0) {
+      console.error(`⚠️ Process finished with non-zero status - ${status}`);
     }
+  });
+
+  process.start();
 }
 
+function showNotification(title, body) {
+  const notification = new NotificationRequest("shadcn-notification");
 
-class FruitDataProvider {
-    constructor() {
-        let rootItems = [];
-        
-        let fruits = ["Apple", "Banana", "Cherry", "Date", "Fig", "Grapefruit", "Kiwi", "Lemon", "Mango", "Nectarine", "Orange", "Pear", "Raspberry", "Strawberry", "Tangerine", "Watermellon"];
-        
-        fruits.forEach((f) => {
-            let element = new FruitItem(f);
-            
-            for (let i = 0; i < 3; i++) {
-                element.addChild(new FruitItem("Test " + (i + 1)));
-            }
-            
-            rootItems.push(element);
-        });
-        
-        this.rootItems = rootItems;
-    }
-    
-    getChildren(element) {
-        // Requests the children of an element
-        if (!element) {
-            return this.rootItems;
-        }
-        else {
-            return element.children;
-        }
-    }
-    
-    getParent(element) {
-        // Requests the parent of an element, for use with the reveal() method
-        return element.parent;
-    }
-    
-    getTreeItem(element) {
-        // Converts an element into its display (TreeItem) representation
-        let item = new TreeItem(element.name);
-        if (element.children.length > 0) {
-            item.collapsibleState = TreeItemCollapsibleState.Collapsed;
-            item.image = "__filetype.png";
-            item.contextValue = "fruit";
-        }
-        else {
-            item.image = "__filetype.txt";
-            item.command = "mysidebar.doubleClick";
-            item.contextValue = "info";
-        }
-        return item;
-    }
+  notification.title = title;
+  notification.body = body;
+
+  nova.notifications.add(notification);
 }
-
