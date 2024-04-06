@@ -60,5 +60,15 @@
         }
       ]
     }
+  ],
+  "config": [
+    {
+      "key": "shadcn.framework",
+      "title": "Framework",
+      "description": "Choose which framework you are using, this determines which CLI command is run when installing components",
+      "type": "enum",
+      "values": ["React", "Vue", "Svelte"],
+      "default": "React"
+    }
   ]
 }
