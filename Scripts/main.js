@@ -66,32 +66,31 @@ nova.commands.register("shadcn.installComponent", (workspace) => {
 function executeCommand(command, successMessage) {
   const framework = nova.config.get(FRAMEWORK);
 
-  let packageIdentifier;
+  let fullCommand;
   switch (framework) {
     case "React":
-      packageIdentifier = "shadcn-ui";
+      fullCommand = "npx shadcn-ui@latest " + command;
       break;
     case "Vue":
-      packageIdentifier = "shadcn-vue";
+      fullCommand = "npx shadcn-vue@latest " + command;
       break;
     case "Svelte":
-      packageIdentifier = "shadcn-svelte";
+      fullCommand = "npx shadcn-svelte@latest " + command;
       break;
     default:
       console.error("Unsupported framework");
       return;
   }
 
-  const fullCommand = `npx ${packageIdentifier}@latest ${command}`;
-
-  const options = {
+  let options = {
     args: ["-c", fullCommand],
     shell: true,
     cwd: nova.workspace.path,
   };
   const shell = nova.config.get(SHELL_PATH_KEY);
-  const process = new Process(shell, options);
+  let process = new Process(shell, options);
   let processError = false;
+  let stdOutRunCount = 0;
   let stdoutOutput = "";
 
   process.onStdout((data) => {
@@ -100,9 +99,11 @@ function executeCommand(command, successMessage) {
       nova.workspace.showErrorMessage(`⚠️ ${data.trim()}`);
       processError = true;
       return;
+    } else if (stdOutRunCount === 0) {
+      console.log(`🏃‍♀️ Running ${fullCommand}`);
+      stdOutRunCount++;
     }
 
-    console.log(`🏃‍♀️ Running ${fullCommand}`);
     stdoutOutput += data.trim() + "\n";
   });
 
@@ -124,7 +125,7 @@ function executeCommand(command, successMessage) {
 }
 
 function showNotification(title, body) {
-  const notification = new NotificationRequest("shadcn-notification");
+  let notification = new NotificationRequest("LaravelArtisan-notification");
 
   notification.title = title;
   notification.body = body;

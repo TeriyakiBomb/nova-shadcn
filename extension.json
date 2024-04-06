@@ -15,6 +15,15 @@
     "process": true
   },
 
+  "commands": {
+    "extensions": [
+      {
+        "title": "Add shadcn component",
+        "command": "shadcn.installComponent"
+      }
+    ]
+  },
+
   "sidebars": [
     {
       "id": "mysidebar",
@@ -69,6 +78,13 @@
       "type": "enum",
       "values": ["React", "Vue", "Svelte"],
       "default": "React"
+    },
+    {
+      "key": "shadcn.shell.path",
+      "title": "Shell",
+      "description": "Full path to your preferred shell",
+      "type": "string",
+      "default": "/bin/sh"
     }
   ]
 }
